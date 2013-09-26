@@ -1,0 +1,214 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<style>
+body {
+  background-color: grey;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+}
+canvas {
+  background-color: white;
+  margin: 0 auto;
+}
+</style>
+</head>
+
+<body id="body">
+<canvas id="game_canvas" width="800" height="450"></canvas>
+
+<script>
+// placeholder
+function GameStart() {}
+function PlayerOnePoints() {}
+function PlayerTwoPoints() {}
+function PlayerThreePoints() {}
+function PlayerFourPoints() {}
+function GameEnd() {}
+
+// canvas
+var canvas = document.getElementById('game_canvas');
+var cc = canvas.getContext('2d');
+
+// boundary boxes
+var boxes = [
+  [  0,  0,400,225],
+  [400,  0,800,225],
+  [  0,225,400,450],
+  [400,225,800,450]
+]
+
+// asset list for loading before playing
+var assetList = [];
+
+// player list
+var players = [{},{},{},{}];
+
+// color list
+var colors = [
+  "#313232",
+  "#27ADE3",
+  "#EE368A",
+  "#B0D136"
+];
+
+function updatePlayersDrawPos() {
+  for (var i = 0; i < 4; i++) {
+    players[i]["posdraw"]["x"] = Math.floor(players[i]["pos"]["x"]);
+    players[i]["posdraw"]["y"] = Math.floor(players[i]["pos"]["y"]);
+  }
+}
+
+// player init
+for (var i = 0; i < 4; i++) {
+  players[i] = {
+    // logical position
+    "pos": { "x":boxes[i][0] + 200 - 54, "y":boxes[i][1] + 112.5 - 54},
+    // draw position
+    "posdraw": {"x":0,"y":0},
+    // normal image
+    "img": new Image,
+    // target acquired image
+    "imga": new Image,
+    // reloading image
+    "imgn": new Image,
+    // direction
+    "dir": [.71,.71]    
+  }
+  // add images to asset list
+  assetList.push(players[i]["img"]);
+  assetList.push(players[i]["imga"]);
+  assetList.push(players[i]["imgn"]);
+}
+
+updatePlayersDrawPos();
+
+// initialization after images are loaded event listeners
+var assetCount = 0;
+for (var i = 0; i < assetList.length; i++) {
+  assetList[i].addEventListener('load', function() {
+    assetCount += 1;
+    if (assetCount == assetList.length) {
+      init();
+    }
+  });
+};
+
+// loading images
+for (var i = 0; i < 4; i++) {
+  players[i]["img"].src = "p" + (i+1) + ".png";
+  players[i]["imga"].src = "p" + (i+1) + "a.png";
+  players[i]["imgn"].src = "p" + (i+1) + "n.png";
+}
+
+// input
+/*
+http://chainjam.com/guidelines/
+Player 1:
+Directions: Left Arrow, Right Arrow, Up Arrow, Down Arrow
+Buttons: Z, X
+Player 2:
+Directions: J (left), K (down), I (up), L (right)
+Buttons: N, M
+Player 3:
+Directions: A (left), S (down), W (up), D (right)
+Buttons: Q, E
+Player 4:
+Directions: F (left), G (down), T (up), H (right)
+Buttons: R, Y
+*/
+var body = document.getElementById("body");
+body.addEventListener("keydown", function (event) {
+  console.log("keydown");
+  
+}, false);
+body.addEventListener("keyup", function (event) {
+  console.log("keyup");
+}, false);
+
+function update () {
+  // input 
+
+  // pi
+  // Math.PI()
+
+  // move players
+  // 1
+  // 0.71
+var speed = 1;
+for (var i = 0; i < 4; i++) {
+  players[i].pos["x"] = players[i].pos["x"] + players[i].dir[0]*speed;
+  players[i].pos["y"] = players[i].pos["y"] + players[i].dir[1]*speed;
+
+  // boundaries
+  if (players[i].pos["x"] > boxes[i][2] - 108) {
+    players[i].pos["x"] = boxes[i][2] - 108;
+  }
+  if (players[i].pos["x"] < boxes[i][0]) {
+    players[i].pos["x"] = boxes[i][0];
+  }
+  if (players[i].pos["y"] > boxes[i][3] - 108) {
+    players[i].pos["y"] = boxes[i][3] - 108;
+  }
+  if (players[i].pos["y"] < boxes[i][1]) {
+    players[i].pos["y"] = boxes[i][1];
+  }
+}
+updatePlayersDrawPos();
+
+  // move targets
+
+}
+
+// initialization
+function init() {
+  GameStart();
+  draw();
+  setInterval(update, 16.6666666);
+}
+
+function drawTargets() {
+
+}
+
+function drawPlayers() {
+  // draw background
+  for (var i = 0; i < 4; i++) {
+    // draw box
+    cc.fillStyle = colors[i];
+    cc.fillRect( boxes[i][0], boxes[i][1], 400, 225 );
+
+    // draw reticule bg
+    cc.fillStyle = "#fff";
+    cc.fillRect( players[i]["posdraw"]["x"], players[i]["posdraw"]["y"], 108, 108);
+  }
+  // draw targets
+  drawTargets();
+
+  // draw reticules
+  for (var i = 0; i < 4; i++) {
+    cc.drawImage(
+      players[i]["img"], //image
+      0, 0, // sx, sy
+      108, 108, // sw, sh
+      players[i]["posdraw"]["x"], // dx
+      players[i]["posdraw"]["y"], // dy
+      108, 108 // dw, dh
+    );
+  }
+}
+
+// draw function
+function draw() {
+  // clear
+  cc.clearRect(0, 0, cc.width, cc.height);
+  drawPlayers();
+
+  requestAnimationFrame(draw);
+}
+
+</script>
+</body>
+
+</html>
