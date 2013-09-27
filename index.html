@@ -24,8 +24,9 @@ h1, p {
 
 <body id="body">
 <canvas id="game_canvas" width="800" height="450"></canvas>
-<h1>Multiaim — #chainjam game by Iwan 'qubodup' Gabovitch</h1>
+<h1>Multiaim — #chainjam game by Iwan Gabovitch <a href="http://twitter.com/qubodup">@qubodup</a></h1>
 <p>Get the targets of your color!</p>
+<p><a href="http://qubodup.github.com/multiaim">Play</a> — <a href="http://github.com/qubodup/multiaim">Source</a></p>
 
 <script>
 // placeholder
@@ -63,8 +64,8 @@ var colors = [
 ];
 
 // constants
-var speedPlayers = 3;
-var speedTargets = .075;
+var speedPlayers = 4;
+var speedTargets = .75;
 var timeReload = .5;
 var timeNow = Date.now();
 var timeLast = Date.now();
@@ -74,6 +75,13 @@ var pi = Math.PI;
 var tau = pi*2;
 var freePoints = 10;
 var debug = false;
+var gameover = false;
+var sounds = {
+  "startstop":new Audio("startstop.wav")
+}
+
+// audio levels
+sounds.startstop.volume = .25;
 
 function updateDrawPos() {
   for (var i = 0; i < 4; i++) {
@@ -105,13 +113,25 @@ for (var i = 0; i < 4; i++) {
     // action and reload timer
     "actionActive":false,
     "timerReload":0,
+    // targeting
+    "targetlocked":false,
     // score
-    "score":0
+    "score":0,
+    // audio
+    "sounds": {
+      "bump": new Audio("bump.wav"),
+      "fire":new Audio("fire.wav"),
+      "firefail":new Audio("firefail.wav")
+    }
   }
   // add images to asset list
   assetList.push(players[i].img);
   assetList.push(players[i].imga);
   assetList.push(players[i].imgn);
+  // set audio levels
+  players[i].sounds.bump.volume = .25;
+  players[i].sounds.fire.volume = .25;
+  players[i].sounds.firefail.volume = .25;
 }
 
 // targets init
@@ -293,18 +313,35 @@ body.addEventListener("keyup", function (event) {
 }, false);
 
 function shoot(shooterIndex) {
+  var targethit = false;
   for (var j = targets[shooterIndex].length - 1; j >= 0; j--) {
-    if ( distance(
-           targets[shooterIndex][j].pos.x,
-           targets[shooterIndex][j].pos.y,
-           players[shooterIndex].pos.x + 54,
-           players[shooterIndex].pos.y + 54
-         ) <= 35
-    ) {
+    if (targets[shooterIndex][j].inrange ) {
+      targethit = true;
+      players[shooterIndex].sounds.fire.play();
       targets[shooterIndex].splice(j, 1);
-      console.log("bam" + j);
+      if (freePoints > 0) {
+        players[shooterIndex].score += 1;
+        freePoints -= 1;
+        if ( shooterIndex == 0 ) { PlayerOnePoints(); }
+        if ( shooterIndex == 1 ) { PlayerTwoPoints(); }
+        if ( shooterIndex == 2 ) { PlayerThreePoints(); }
+        if ( shooterIndex == 3 ) { PlayerFourPoints(); }
+      }
+      if ( debug ) {
+        console.log("bam" + j);
+      }
     }
   }
+  if ( !targethit ) {
+    players[shooterIndex].sounds.firefail.play();
+  }
+}
+
+function gameEnd () {
+    gameover = true;
+    timerGame = 0;
+    sounds.startstop.play();
+    GameEnd();
 }
 
 function update() {
@@ -314,9 +351,8 @@ function update() {
   // time
   if (timerGame > 0 && freePoints > 0) {
     timerGame = timerGame - dt;
-  } else {
-    timerGame = 0;
-    GameEnd();
+  } else if ( !gameover ) {
+    gameEnd();
   }
   // actions
   for (var i = 0; i < 4; i++) {
@@ -328,6 +364,7 @@ function update() {
     }
   }
 
+  // move players
   for (var i = 0; i < 4; i++) {
     players[i].pos.x = players[i].pos.x + players[i].dir[0] * players[i].speed * speedPlayers;
     players[i].pos.y = players[i].pos.y + players[i].dir[1] * players[i].speed * speedPlayers;
@@ -335,16 +372,19 @@ function update() {
     // boundaries
     if (players[i].pos.x > boxes[i][2] - 108) {
       players[i].pos.x = boxes[i][2] - 108;
+      players[i].sounds.bump.play();
     } else if (players[i].pos.x < boxes[i][0]) {
       players[i].pos.x = boxes[i][0];
+      players[i].sounds.bump.play();
     }
     if (players[i].pos.y > boxes[i][3] - 108) {
       players[i].pos.y = boxes[i][3] - 108;
+      players[i].sounds.bump.play();
     } else if (players[i].pos.y < boxes[i][1]) {
       players[i].pos.y = boxes[i][1];
+      players[i].sounds.bump.play();
     }
   }
-  updateDrawPos();
 
   // move targets
   for (var i = 0; i < 4; i++) {
@@ -366,11 +406,33 @@ function update() {
     }
   }
 
+  updateDrawPos();
+
+  // distance and targeting
+  for (var i = 0; i < 4; i++) {
+    players[i].targetlocked = false;
+    for (var j = targets[i].length - 1; j >= 0; j--) {
+      if ( distance(
+             targets[i][j].pos.x,
+             targets[i][j].pos.y,
+             players[i].pos.x + 54,
+             players[i].pos.y + 54
+           ) <= 35
+      ) {
+        targets[i][j].inrange = true;
+        players[i].targetlocked = true;
+      } else {
+        targets[i][j].inrange = false;
+      }
+    }
+  }
+
 }
 
 // initialization
 function init() {
   GameStart();
+  sounds.startstop.play();
   draw();
   setInterval(update, 16.6666666);
 }
@@ -414,6 +476,8 @@ function drawPlayers() {
   for (var i = 0; i < 4; i++) {
     if (players[i].timerReload > 0) {
       var imgCurrent = players[i].imgn;
+    } else if (players[i].targetlocked) {
+      var imgCurrent = players[i].imga;
     } else {
       var imgCurrent = players[i].img;
     }
@@ -463,11 +527,13 @@ function drawText() {
   cc.fillText(Math.ceil(timerGame), 800/2, 450/2);
   cc.font = "bold 14pt Sans-Serif";
   // debug
-  cc.fillText(dt*1000, 800/2, 450/2 + 20);
+  if (debug) {
+    cc.fillText(dt*1000, 800/2, 450/2 + 20);
+  }
   cc.fillText(players[0].score, 14, 14);
   cc.fillText(players[1].score, 800 - 14, 14);
-  cc.fillText(players[1].score, 14, 450 - 14);
-  cc.fillText(players[1].score, 800 - 14, 450 - 14);
+  cc.fillText(players[2].score, 14, 450 - 14);
+  cc.fillText(players[3].score, 800 - 14, 450 - 14);
 }
 
 function drawDebug() {
