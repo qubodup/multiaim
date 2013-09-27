@@ -1,15 +1,19 @@
 <!DOCTYPE HTML>
 <html>
 <head>
+  <title>MULTIAIM - Chainjam game by Iwan Gabovitch @qubodup</title>
+  <meta property="og:title" content="Multiaim - Chainjam HTML5 game by Iwan Gabovitch @qubodup" />
+  <meta property="og:type" content="game" />
+  <meta property="og:url" content="http://qubodup.github.com/multiaim/" />
+  <meta property="og:image" content="http://qubodup.github.com/multiaim/multiaim.png" />
+  <link rel="shortcut icon" href="favicon.ico" />
 <style>
 body {
-  background-color: white;
   margin: 0;
   padding: 0;
   text-align: center;
 }
 canvas {
-  background-color: white;
   margin: 0 auto;
 }
 h1, p {
@@ -24,9 +28,10 @@ h1, p {
 
 <body id="body">
 <canvas id="game_canvas" width="800" height="450"></canvas>
+<!-- feel free to remove the following non-script part for the chainjam game -->
 <h1>Multiaim — #chainjam game by Iwan Gabovitch <a href="http://twitter.com/qubodup">@qubodup</a></h1>
 <p>Get the targets of your color!</p>
-<p><a href="http://qubodup.github.com/multiaim">Play</a> — <a href="http://github.com/qubodup/multiaim">Source</a></p>
+<p><a href="http://qubodup.github.com/multiaim">Play</a> — <a href="http://github.com/qubodup/multiaim">Source</a> — <a href="http://freesound.org/people/DaveN/sounds/192445/">Music</a> by DaveN</p>
 
 <script>
 // placeholder
@@ -79,9 +84,29 @@ var gameover = false;
 var sounds = {
   "startstop":new Audio("startstop.wav")
 }
+var music = new Audio();
+
+// HTML5 audio, wtf is wrong with you?
+// http://html5doctor.com/html5-audio-the-state-of-play/
+var canPlayOgg = !!music.canPlayType && music.canPlayType('audio/ogg; codecs="vorbis"') != "";
+if (canPlayOgg) {
+var music = new Audio("DaveN-triptronic-cut2.ogg");
+} else {
+var music = new Audio("DaveN-triptronic-cut2.mp3");
+}
 
 // audio levels
+music.volume = .5;
 sounds.startstop.volume = .25;
+
+// music looping
+music.loop = true;
+// loop hack
+// http://stackoverflow.com/questions/3273552/html-5-audio-looping
+music.addEventListener('ended', function() {
+    this.currentTime = 0;
+    this.play();
+}, false);
 
 function updateDrawPos() {
   for (var i = 0; i < 4; i++) {
@@ -139,7 +164,7 @@ var targets = [[],[],[],[]];
 for (var i = 0; i < 4; i++) {
   for (var j = 0; j < 10; j++) {
     targets[i].push({
-      "speed": speedTargets + 0.2 * j,
+      "speed": speedTargets + 0.3 * j,
       "pos": {
         "x":Math.floor(Math.random() * (800 - 30)),
         "y":Math.floor(Math.random() * (450 - 30))
@@ -337,7 +362,7 @@ function shoot(shooterIndex) {
   }
 }
 
-function gameEnd () {
+function makeGameEnd () {
     gameover = true;
     timerGame = 0;
     sounds.startstop.play();
@@ -352,7 +377,7 @@ function update() {
   if (timerGame > 0 && freePoints > 0) {
     timerGame = timerGame - dt;
   } else if ( !gameover ) {
-    gameEnd();
+    makeGameEnd();
   }
   // actions
   for (var i = 0; i < 4; i++) {
@@ -432,12 +457,14 @@ function update() {
 // initialization
 function init() {
   GameStart();
+  music.play();
   sounds.startstop.play();
   draw();
   setInterval(update, 16.6666666);
 }
 
 function drawTargets() {
+  // clip drawing to behind player target windows
   cc.save();
   cc.beginPath()
   for (var i = 0; i < 4; i++) {
@@ -445,6 +472,7 @@ function drawTargets() {
   }
   cc.closePath();
   cc.clip();
+  // actually draw targets
   for (var i = 0; i < 4; i++) {
     cc.fillStyle = colors[i];
     cc.beginPath();
@@ -540,11 +568,13 @@ function drawDebug() {
   if ( debug ) {
     for (var i = 0; i < 4; i++) {
       for (var j = 0; j < targets[i].length; j++) {
+  cc.beginPath();
       cc.moveTo(
                targets[i][j].pos.x,
                targets[i][j].pos.y);
       cc.lineTo(players[i].pos.x + 54,
                players[i].pos.y + 54);
+  cc.closePath();
       cc.stroke();
       }
     }
