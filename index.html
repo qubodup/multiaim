@@ -90,9 +90,9 @@ var music = new Audio();
 // http://html5doctor.com/html5-audio-the-state-of-play/
 var canPlayOgg = !!music.canPlayType && music.canPlayType('audio/ogg; codecs="vorbis"') != "";
 if (canPlayOgg) {
-var music = new Audio("DaveN-triptronic-cut2.ogg");
+  var music = new Audio("DaveN-triptronic-cut2.ogg");
 } else {
-var music = new Audio("DaveN-triptronic-cut2.mp3");
+  var music = new Audio("DaveN-triptronic-cut2.mp3");
 }
 
 // audio levels
@@ -457,8 +457,10 @@ function update() {
 // initialization
 function init() {
   GameStart();
-  music.play();
+
   sounds.startstop.play();
+  // HTML5 audio is breaking my brain
+  music.play();
   draw();
   setInterval(update, 16.6666666);
 }
