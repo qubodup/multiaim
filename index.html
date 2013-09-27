@@ -73,6 +73,7 @@ var dt = 0;
 var pi = Math.PI;
 var tau = pi*2;
 var freePoints = 10;
+var debug = false;
 
 function updateDrawPos() {
   for (var i = 0; i < 4; i++) {
@@ -124,6 +125,7 @@ for (var i = 0; i < 4; i++) {
         "y":Math.floor(Math.random() * (450 - 30))
       },
       "posdraw": [0,0],
+      "inrange": false,
       // Elegantly random
       // http://stackoverflow.com/questions/8611830/javascript-random-positive-or-negative-number
       "dir": [Math.random() < 0.5 ? -1 : 1, Math.random() < 0.5 ? -1 : 1]
@@ -227,6 +229,8 @@ body.addEventListener("keydown", function (event) {
   // avoid accidental space press
   } else if (event.keyCode == 32) {
     event.preventDefault()
+  } else if (event.keyCode == 86) {
+    debug ^= true;
   }
 }, false);
 body.addEventListener("keyup", function (event) {
@@ -289,14 +293,13 @@ body.addEventListener("keyup", function (event) {
 }, false);
 
 function shoot(shooterIndex) {
-//  for (var j = targets[shooterIndex].length - 1; j >= 0; j--) {
-  for (var j = 0; j < targets[shooterIndex].length; j++) {
+  for (var j = targets[shooterIndex].length - 1; j >= 0; j--) {
     if ( distance(
            targets[shooterIndex][j].pos.x,
            targets[shooterIndex][j].pos.y,
            players[shooterIndex].pos.x + 54,
            players[shooterIndex].pos.y + 54
-         ) <= 25
+         ) <= 35
     ) {
       targets[shooterIndex].splice(j, 1);
       console.log("bam" + j);
@@ -426,15 +429,17 @@ function drawPlayers() {
 }
 
 function distance(p1x, p1y, p2x, p2y) {
-  var dist = Math.sqrt((Math.abs(p1x - p2x)^2) + (Math.abs(p1y - p2y)^2));
-  console.log(
-    "The distance between " +
-    p1x + "/" + p1y +
-    " and " +
-    p2x + "/" + p2y +
-    " is " +
-    dist
-  );
+  var dist = Math.sqrt((Math.pow(p1x - p2x, 2)) + (Math.pow(p1y - p2y, 2)));
+  if ( debug ) {
+    console.log(
+      "The distance between " +
+      p1x + "/" + p1y +
+      " and " +
+      p2x + "/" + p2y +
+      " is " +
+      dist
+    );
+  }
   return dist;
 }
 
@@ -465,22 +470,28 @@ function drawText() {
   cc.fillText(players[1].score, 800 - 14, 450 - 14);
 }
 
+function drawDebug() {
+  if ( debug ) {
+    for (var i = 0; i < 4; i++) {
+      for (var j = 0; j < targets[i].length; j++) {
+      cc.moveTo(
+               targets[i][j].pos.x,
+               targets[i][j].pos.y);
+      cc.lineTo(players[i].pos.x + 54,
+               players[i].pos.y + 54);
+      cc.stroke();
+      }
+    }
+  }
+}
+
 // draw function
 function draw() {
   // clear
   cc.clearRect(0, 0, cc.width, cc.height);
   drawPlayers();
   drawText();
-for (var i = 0; i < 4; i++) {
-  for (var j = 0; j < targets[i].length; j++) {
-  cc.moveTo(
-           targets[i][j].pos.x,
-           targets[i][j].pos.y);
-  cc.lineTo(players[i].pos.x + 54,
-           players[i].pos.y + 54);
-  cc.stroke();
-  }
-}
+  drawDebug();
 
   requestAnimationFrame(draw);
 }
