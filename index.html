@@ -63,7 +63,8 @@ var colors = [
 ];
 
 // constants
-var speed = 3;
+var speedPlayers = 3;
+var speedTargets = .075;
 var timeReload = .5;
 var timeNow = Date.now();
 var timeLast = Date.now();
@@ -73,10 +74,14 @@ var pi = Math.PI;
 var tau = pi*2;
 var freePoints = 10;
 
-function updatePlayersDrawPos() {
+function updateDrawPos() {
   for (var i = 0; i < 4; i++) {
     players[i].posdraw.x = Math.floor(players[i].pos.x);
     players[i].posdraw.y = Math.floor(players[i].pos.y);
+    for (var j = 0; j < targets[i].length; j++) {
+      targets[i][j].posdraw.x = Math.floor(targets[i][j].pos.x);
+      targets[i][j].posdraw.y = Math.floor(targets[i][j].pos.y);
+    }
   }
 }
 
@@ -85,7 +90,7 @@ for (var i = 0; i < 4; i++) {
   players[i] = {
     // logical position
     "pos": { "x":boxes[i][0] + 200 - 54, "y":boxes[i][1] + 112.5 - 54},
-    // draw position
+    // draw position, to prevent anti-aliasing
     "posdraw": {"x":0,"y":0},
     // normal image
     "img": new Image,
@@ -98,7 +103,7 @@ for (var i = 0; i < 4; i++) {
     "speed": 0,
     // action and reload timer
     "actionActive":false,
-    "reloadTimer":0,
+    "timerReload":0,
     // score
     "score":0
   }
@@ -108,7 +113,25 @@ for (var i = 0; i < 4; i++) {
   assetList.push(players[i].imgn);
 }
 
-updatePlayersDrawPos();
+// targets init
+var targets = [[],[],[],[]];
+for (var i = 0; i < 4; i++) {
+  for (var j = 0; j < 10; j++) {
+    targets[i].push({
+      "speed": speedTargets + 0.2 * j,
+      "pos": {
+        "x":Math.floor(Math.random() * (800 - 30)),
+        "y":Math.floor(Math.random() * (450 - 30))
+      },
+      "posdraw": [0,0],
+      // Elegantly random
+      // http://stackoverflow.com/questions/8611830/javascript-random-positive-or-negative-number
+      "dir": [Math.random() < 0.5 ? -1 : 1, Math.random() < 0.5 ? -1 : 1]
+    })
+  }
+}
+
+updateDrawPos();
 
 // initialization after images are loaded event listeners
 var assetCount = 0;
@@ -129,7 +152,7 @@ for (var i = 0; i < 4; i++) {
 }
 
 // input
-// contains scrolling prevention hack:
+// contains scrolling prevention hack(?):
 // http://stackoverflow.com/questions/7603141/disable-arrow-keys-from-scrolling-only-when-user-is-interacting-with-canvas
 /*
 http://chainjam.com/guidelines/
@@ -156,7 +179,7 @@ Buttons: R, Y
 */
 var body = document.getElementById("body");
 body.addEventListener("keydown", function (event) {
-  console.log("keydown");
+  //console.log("keydown");
   if        (event.keyCode == 37) {
     players[0].dir[0] = -1;
     event.preventDefault()
@@ -207,7 +230,7 @@ body.addEventListener("keydown", function (event) {
   }
 }, false);
 body.addEventListener("keyup", function (event) {
-  console.log("keyup");
+  //console.log("keyup");
   if        (event.keyCode == 37) {
     players[0].dir[0] = 0;
     event.preventDefault()
@@ -257,11 +280,29 @@ body.addEventListener("keyup", function (event) {
     event.preventDefault()
   }
   for (var i = 0; i < 4; i++) {
-    players[i].speed = 1;
     if (players[i].dir.x != 0 && players[i].dir.y != 0) {
+      players[i].speed = 0.71;
+    } else {
+      players[i].speed = 1;
     }
   }
 }, false);
+
+function shoot(shooterIndex) {
+//  for (var j = targets[shooterIndex].length - 1; j >= 0; j--) {
+  for (var j = 0; j < targets[shooterIndex].length; j++) {
+    if ( distance(
+           targets[shooterIndex][j].pos.x,
+           targets[shooterIndex][j].pos.y,
+           players[shooterIndex].pos.x + 54,
+           players[shooterIndex].pos.y + 54
+         ) <= 25
+    ) {
+      targets[shooterIndex].splice(j, 1);
+      console.log("bam" + j);
+    }
+  }
+}
 
 function update() {
   timeLast = timeNow;
@@ -274,31 +315,53 @@ function update() {
     timerGame = 0;
     GameEnd();
   }
-  // input 
+  // actions
+  for (var i = 0; i < 4; i++) {
+    if (players[i].timerReload > 0) {
+      players[i].timerReload -= dt;
+    } else if (players[i].actionActive) {
+      players[i].timerReload = timeReload;
+      shoot(i);
+    }
+  }
 
-  // pi
+  for (var i = 0; i < 4; i++) {
+    players[i].pos.x = players[i].pos.x + players[i].dir[0] * players[i].speed * speedPlayers;
+    players[i].pos.y = players[i].pos.y + players[i].dir[1] * players[i].speed * speedPlayers;
 
-for (var i = 0; i < 4; i++) {
-  players[i].pos.x = players[i].pos.x + players[i].dir[0] * players[i].speed * speed;
-  players[i].pos.y = players[i].pos.y + players[i].dir[1] * players[i].speed * speed;
-
-  // boundaries
-  if (players[i].pos.x > boxes[i][2] - 108) {
-    players[i].pos.x = boxes[i][2] - 108;
+    // boundaries
+    if (players[i].pos.x > boxes[i][2] - 108) {
+      players[i].pos.x = boxes[i][2] - 108;
+    } else if (players[i].pos.x < boxes[i][0]) {
+      players[i].pos.x = boxes[i][0];
+    }
+    if (players[i].pos.y > boxes[i][3] - 108) {
+      players[i].pos.y = boxes[i][3] - 108;
+    } else if (players[i].pos.y < boxes[i][1]) {
+      players[i].pos.y = boxes[i][1];
+    }
   }
-  if (players[i].pos.x < boxes[i][0]) {
-    players[i].pos.x = boxes[i][0];
-  }
-  if (players[i].pos.y > boxes[i][3] - 108) {
-    players[i].pos.y = boxes[i][3] - 108;
-  }
-  if (players[i].pos.y < boxes[i][1]) {
-    players[i].pos.y = boxes[i][1];
-  }
-}
-updatePlayersDrawPos();
+  updateDrawPos();
 
   // move targets
+  for (var i = 0; i < 4; i++) {
+    for (var j = 0; j < targets[i].length; j++) {
+      targets[i][j].pos.x += targets[i][j].dir[0] * targets[i][j].speed * speedTargets;
+      targets[i][j].pos.y += targets[i][j].dir[1] * targets[i][j].speed * speedTargets;
+
+    // boundaries
+    if (targets[i][j].pos.x > 800 - 20) {
+      targets[i][j].dir[0] = -1;
+    } else if (targets[i][j].pos.x < 20) {
+      targets[i][j].dir[0] = 1;
+    }
+    if (targets[i][j].pos.y > 450 - 20) {
+      targets[i][j].dir[1] = -1;
+    } else if (targets[i][j].pos.y < 20) {
+      targets[i][j].dir[1] = 1;
+    }
+    }
+  }
 
 }
 
@@ -310,7 +373,23 @@ function init() {
 }
 
 function drawTargets() {
-
+  cc.save();
+  cc.beginPath()
+  for (var i = 0; i < 4; i++) {
+    cc.rect( players[i].posdraw.x, players[i].posdraw.y, 108, 108);
+  }
+  cc.closePath();
+  cc.clip();
+  for (var i = 0; i < 4; i++) {
+    cc.fillStyle = colors[i];
+    cc.beginPath();
+    for (var j = 0; j < targets[i].length; j++) {
+      cc.arc(targets[i][j].posdraw.x, targets[i][j].posdraw.y, 20, 0, tau);
+    }
+    cc.closePath();
+    cc.fill();
+  }
+  cc.restore();
 }
 
 function drawPlayers() {
@@ -324,13 +403,19 @@ function drawPlayers() {
     cc.fillStyle = "#fff";
     cc.fillRect( players[i].posdraw.x, players[i].posdraw.y, 108, 108);
   }
+
   // draw targets
   drawTargets();
 
   // draw reticules
   for (var i = 0; i < 4; i++) {
+    if (players[i].timerReload > 0) {
+      var imgCurrent = players[i].imgn;
+    } else {
+      var imgCurrent = players[i].img;
+    }
     cc.drawImage(
-      players[i].img, //image
+      imgCurrent, //image
       0, 0, // sx, sy
       108, 108, // sw, sh
       players[i].posdraw.x, // dx
@@ -338,6 +423,19 @@ function drawPlayers() {
       108, 108 // dw, dh
     );
   }
+}
+
+function distance(p1x, p1y, p2x, p2y) {
+  var dist = Math.sqrt((Math.abs(p1x - p2x)^2) + (Math.abs(p1y - p2y)^2));
+  console.log(
+    "The distance between " +
+    p1x + "/" + p1y +
+    " and " +
+    p2x + "/" + p2y +
+    " is " +
+    dist
+  );
+  return dist;
 }
 
 function drawText() {
@@ -351,6 +449,7 @@ function drawText() {
   cc.arc( 800, 0  , 38, 0, tau);
   cc.arc( 800, 450, 38, 0, tau);
   cc.arc( 000, 450, 38, 0, tau);
+  cc.closePath();
   cc.fill();
   cc.font = "bold 20pt Sans-Serif";
   cc.textAlign = "center";
@@ -372,6 +471,16 @@ function draw() {
   cc.clearRect(0, 0, cc.width, cc.height);
   drawPlayers();
   drawText();
+for (var i = 0; i < 4; i++) {
+  for (var j = 0; j < targets[i].length; j++) {
+  cc.moveTo(
+           targets[i][j].pos.x,
+           targets[i][j].pos.y);
+  cc.lineTo(players[i].pos.x + 54,
+           players[i].pos.y + 54);
+  cc.stroke();
+  }
+}
 
   requestAnimationFrame(draw);
 }
